@@ -1,0 +1,68 @@
+---
+- hosts: "Managed_Node1"
+  become: yes
+  become_user: root
+  tasks:
+    - name: Update apt package index
+      apt:
+        update_cache: yes
+    - name: Add Docker’s official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+      notify: Update apt cache
+
+    - name: Update apt package index after adding Docker repo
+      apt:
+        update_cache: yes
+    
+    - name: Install Docker CE
+      apt:
+        name: docker-ce
+        state: present
+      notify: Restart Docker
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull Apache Docker image
+      docker_image:
+        name: httpd
+        source: pull
+
+    - name: Create Docker network with IPAM configuration
+      docker_network:
+        name: custom_network
+        state: present
+        driver: bridge
+        ipam_config:
+        - subnet: 172.168.10.0/30
+          gateway: 172.168.10.1
+
+    - name: Run Apache Docker container
+      docker_container:
+        name: apache_server
+        image: httpd
+        state: started
+        ports:
+          - "80:80"
+        networks:
+          - name: custom_network
+            ipv4_address: 172.168.10.2
+  handlers:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    
+    - name: Restart Docker
+      service:
+        name: docker
+        state: restarted

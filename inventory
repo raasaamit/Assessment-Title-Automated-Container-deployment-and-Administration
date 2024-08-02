@@ -1,0 +1,2 @@
+[Managed_Node1]
+192.168.64.131 ansible_ssh_user=root ansible_ssh_pass=root
